@@ -135,25 +135,29 @@ function Home() {
 
     const totalTaskHours = tasks.filter(t => !t.completed).reduce((sum, t) => sum + Number(t.estimated_hours), 0);
 
+    // Create a set of dates the user has already provided
+    const userDates = new Set(availabilities.map(a => a.date));
     let timeSlots = availabilities.map(a => ({ date: a.date, start: a.start, end: a.end }));
 
-    // If user has no availability, or if we want to provide a fallback,
-    // add default slots for the next 7 days if they aren't already there
-    if (timeSlots.length === 0) {
-      timeSlots = generateDefaultSlots();
-    } else {
-      // If we have very few slots, let's add some extras for later days just in case
-      const lastDate = new Date(Math.max(...timeSlots.map(s => new Date(s.date))));
-      for (let i = 1; i <= 5; i++) {
-        const d = new Date(lastDate);
-        d.setDate(d.getDate() + i);
+    // AUTOMATIC BUFFER: Fill in the gaps from Today for the next 7 days
+    // This ensures if a task is due tomorrow, we have a slot for it even if the user only added a slot for next week.
+    for (let i = 0; i < 7; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() + i);
+      const dateStr = d.toISOString().split('T')[0];
+
+      // If the user hasn't provided a slot for this day, add a default one
+      if (!userDates.has(dateStr)) {
         timeSlots.push({
-          date: d.toISOString().split('T')[0],
+          date: dateStr,
           start: '09:00',
           end: '17:00'
         });
       }
     }
+
+    // Sort timeSlots to ensure they are chronological for the backend
+    timeSlots.sort((a, b) => new Date(a.date + 'T' + a.start) - new Date(b.date + 'T' + b.start));
 
     const requestBody = {
       tasks: tasks.filter(t => !t.completed).map(t => ({
@@ -481,30 +485,48 @@ function Home() {
                     </div>
                   ) : (
                     <div className="schedule-list">
-                      {schedule.map((slot, idx) => (
-                        <motion.div
-                          key={idx}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: idx * 0.05 }}
-                          className="task-item border-start border-4 border-sage"
-                          style={{ backgroundColor: 'var(--bg-color)', color: 'var(--text-main)' }}
-                        >
-                          <div>
-                            <div className="fw-bold">{slot.task}</div>
-                            <div className="small text-muted">
-                              <Clock size={14} className="me-1 inline" />
-                              {slot.time_block[0]} - {slot.time_block[1]} ({slot.hours_allocated}h)
+                      {schedule.map((slot, idx) => {
+                        // Check if this task appears multiple times to show "Session X"
+                        const taskSessions = schedule.filter(s => s.task === slot.task);
+                        const sessionIndex = taskSessions.findIndex(s => s.date === slot.date && s.time_block[0] === slot.time_block[0]) + 1;
+                        const isSplit = taskSessions.length > 1;
+
+                        return (
+                          <motion.div
+                            key={idx}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: idx * 0.05 }}
+                            className={`task-item border-start border-4 ${slot.is_late ? 'border-danger' : 'border-sage'}`}
+                            style={{ backgroundColor: 'var(--bg-color)', color: 'var(--text-main)' }}
+                          >
+                            <div className="flex-grow-1">
+                              <div className="d-flex align-items-center gap-2">
+                                <span className="fw-bold">{slot.task}</span>
+                                {isSplit && (
+                                  <span className="badge border border-sage border-opacity-25" style={{ fontSize: '10px', backgroundColor: 'rgba(45, 74, 68, 0.1)', color: 'var(--accent-sage)' }}>
+                                    SESSION {sessionIndex}/{taskSessions.length}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="small text-muted mt-1">
+                                <Clock size={14} className="me-1 inline" />
+                                {slot.time_block[0]} - {slot.time_block[1]} ({slot.hours_allocated}h)
+                              </div>
                             </div>
-                          </div>
-                          <div className="d-flex align-items-center gap-3">
-                            <div className="text-end">
-                              <div className="text-sage fw-bold small">{slot.date}</div>
-                              {slot.is_late && <span className="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25" style={{ fontSize: '10px' }}>LATE</span>}
+                            <div className="d-flex align-items-center gap-3">
+                              <div className="text-end">
+                                <div className="text-sage fw-bold small">{slot.date}</div>
+                                {slot.is_late && (
+                                  <span className="badge border border-danger border-opacity-25 mt-1" style={{ fontSize: '10px', backgroundColor: 'rgba(220, 53, 69, 0.1)', color: '#dc3545' }}>
+                                    OVERDUE
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </motion.div>
-                      ))}
+                          </motion.div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
