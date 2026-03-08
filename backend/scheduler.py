@@ -29,11 +29,6 @@ def schedule_tasks(tasks: List[Dict], time_slots: List[Dict]) -> List[Dict]:
         while task_index < len(tasks) and hours_in_block > 0.01:
             task = tasks[task_index]
             
-            # If task is already due before the slot date, skip it
-            if task["due_date"] < slot_date:
-                task_index += 1
-                continue
-            
             task_hours = min(task["estimated_hours"], hours_in_block)
             if task_hours <= 0:
                 task_index += 1
@@ -45,7 +40,8 @@ def schedule_tasks(tasks: List[Dict], time_slots: List[Dict]) -> List[Dict]:
                 "date": slot["date"],
                 "task": task["title"],
                 "hours_allocated": round(task_hours, 1),
-                "time_block": [current_block_time.strftime("%H:%M"), end_task_time.strftime("%H:%M")]
+                "time_block": [current_block_time.strftime("%H:%M"), end_task_time.strftime("%H:%M")],
+                "is_late": task["due_date"] < slot_date
             })
             
             task["estimated_hours"] -= task_hours

@@ -133,16 +133,35 @@ function Home() {
       return slots;
     };
 
+    const totalTaskHours = tasks.filter(t => !t.completed).reduce((sum, t) => sum + Number(t.estimated_hours), 0);
+
+    let timeSlots = availabilities.map(a => ({ date: a.date, start: a.start, end: a.end }));
+
+    // If user has no availability, or if we want to provide a fallback,
+    // add default slots for the next 7 days if they aren't already there
+    if (timeSlots.length === 0) {
+      timeSlots = generateDefaultSlots();
+    } else {
+      // If we have very few slots, let's add some extras for later days just in case
+      const lastDate = new Date(Math.max(...timeSlots.map(s => new Date(s.date))));
+      for (let i = 1; i <= 5; i++) {
+        const d = new Date(lastDate);
+        d.setDate(d.getDate() + i);
+        timeSlots.push({
+          date: d.toISOString().split('T')[0],
+          start: '09:00',
+          end: '17:00'
+        });
+      }
+    }
+
     const requestBody = {
-      // ONLY send active tasks, ignore completed
       tasks: tasks.filter(t => !t.completed).map(t => ({
         title: t.title,
         due_date: t.due_date,
         estimated_hours: t.estimated_hours
       })),
-      time_slots: availabilities.length > 0
-        ? availabilities.map(a => ({ date: a.date, start: a.start, end: a.end }))
-        : generateDefaultSlots()
+      time_slots: timeSlots
     };
 
     if (requestBody.tasks.length === 0) {
@@ -478,7 +497,12 @@ function Home() {
                               {slot.time_block[0]} - {slot.time_block[1]} ({slot.hours_allocated}h)
                             </div>
                           </div>
-                          <div className="text-sage fw-bold small">{slot.date}</div>
+                          <div className="d-flex align-items-center gap-3">
+                            <div className="text-end">
+                              <div className="text-sage fw-bold small">{slot.date}</div>
+                              {slot.is_late && <span className="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25" style={{ fontSize: '10px' }}>LATE</span>}
+                            </div>
+                          </div>
                         </motion.div>
                       ))}
                     </div>

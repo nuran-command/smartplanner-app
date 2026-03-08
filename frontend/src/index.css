@@ -250,6 +250,23 @@ h3,
   background-color: var(--accent-terracotta) !important;
 }
 
+.btn-sage {
+  background-color: var(--accent-sage) !important;
+  color: white !important;
+  border: none !important;
+}
+
+.btn-sage:hover {
+  background-color: #1a2e2a !important;
+  opacity: 0.9;
+}
+
+.btn-terracotta {
+  background-color: var(--accent-terracotta) !important;
+  color: white !important;
+  border: none !important;
+}
+
 .hero-section {
   padding: 80px 0;
 }
