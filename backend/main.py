@@ -1,5 +1,8 @@
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, status, Request
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
+import os
 from datetime import date, time, datetime, timedelta
 from backend.db_models import Task, create_tables, get_session, User # Assuming User model is added to db_models
 from sqlalchemy.orm import Session
@@ -12,7 +15,7 @@ from passlib.context import CryptContext
 
 
 # Auth Configuration
-SECRET_KEY = "ZEN_SECRET_KEY" # In a real app, use environment variables
+SECRET_KEY = os.getenv("SECRET_KEY", "ZEN_SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 300
 
@@ -226,4 +229,15 @@ def test_db(db: Session = Depends(get_session)):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# Mount Static Files (Must be last)
+# This assumes the frontend is built into frontend/dist
+frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+if os.path.exists(frontend_path):
+    app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
+    
+    @app.exception_handler(404)
+    async def custom_404_handler(request: Request, __):
+        # Serve index.html for all SPA routes
+        return FileResponse(os.path.join(frontend_path, "index.html"))
     
