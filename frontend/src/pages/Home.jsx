@@ -15,6 +15,7 @@ import {
   Trash2
 } from 'lucide-react';
 import Layout from '../components/Layout';
+import PomodoroTimer from '../components/PomodoroTimer';
 
 const API_BASE_URL = 'http://localhost:8500';
 
@@ -351,27 +352,34 @@ function Home() {
         <div className="row g-5">
           {/* Main Column */}
           <div className="col-lg-7">
-            {/* AI Coach Card */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="zen-card bg-sage text-white position-relative overflow-hidden"
-            >
-              <div className="position-relative z-index-2">
-                <h3 className="h5 serif mb-3 d-flex align-items-center gap-2">
-                  <Sparkles size={18} /> AI Study Coach
-                </h3>
-                <p className="mb-0 text-white-50 lh-lg" style={{ fontSize: '1.1rem' }}>
-                  "{aiAdvice}"
-                </p>
+            <div className="row g-4">
+              <div className="col-md-7">
+                {/* AI Coach Card */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="zen-card bg-sage text-white position-relative overflow-hidden h-100"
+                >
+                  <div className="position-relative z-index-2">
+                    <h3 className="h5 serif mb-3 d-flex align-items-center gap-2">
+                      <Sparkles size={18} /> AI Study Coach
+                    </h3>
+                    <p className="mb-0 text-white-50 lh-lg" style={{ fontSize: '1rem' }}>
+                      "{aiAdvice}"
+                    </p>
+                  </div>
+                  <div
+                    className="position-absolute"
+                    style={{ bottom: '-20px', right: '-20px', opacity: 0.1 }}
+                  >
+                    <Sparkles size={150} />
+                  </div>
+                </motion.div>
               </div>
-              <div
-                className="position-absolute"
-                style={{ bottom: '-20px', right: '-20px', opacity: 0.1 }}
-              >
-                <Sparkles size={150} />
+              <div className="col-md-5">
+                <PomodoroTimer />
               </div>
-            </motion.div>
+            </div>
 
             {/* Tasks Section */}
             <div className="mt-5">
