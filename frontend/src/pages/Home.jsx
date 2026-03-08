@@ -17,7 +17,7 @@ import {
 import Layout from '../components/Layout';
 import PomodoroTimer from '../components/PomodoroTimer';
 
-const API_BASE_URL = 'http://localhost:8500';
+const API_BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:8500' : '';
 
 function Home() {
   const navigate = useNavigate();

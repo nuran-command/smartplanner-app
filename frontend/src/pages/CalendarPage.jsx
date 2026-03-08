@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import Layout from '../components/Layout';
 import { Calendar as CalendarIcon, Upload } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:8500';
+const API_BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:8500' : '';
 
 function CalendarPage() {
     const [date, setDate] = useState(new Date());

@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ShieldCheck } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:8500';
+const API_BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:8500' : '';
 
 function LoginPage() {
     const [username, setUsername] = useState('');

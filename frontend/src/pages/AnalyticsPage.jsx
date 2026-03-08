@@ -18,7 +18,7 @@ import { motion } from 'framer-motion';
 import Layout from '../components/Layout';
 import { TrendingUp, PieChart as PieChartIcon, Activity, Sparkles } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:8500';
+const API_BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:8500' : '';
 
 const COLORS = ['#2d4a44', '#c96d54', '#e8d5c4', '#5e6363'];
 
