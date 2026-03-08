@@ -2,14 +2,15 @@
 # exit on error
 set -o errexit
 
-# Build Frontend
+# 1. Build Frontend
+echo "Building Frontend..."
 cd frontend
 npm install
 npm run build
 cd ..
 
-# Build Backend
-python3 -m venv venv
-./venv/bin/pip install --upgrade pip
-./venv/bin/pip install -r requirements.txt
-./venv/bin/pip install gunicorn
+# 2. Build Backend
+echo "Building Backend..."
+python3 -m pip install --upgrade pip
+python3 -m pip install -r requirements.txt
+python3 -m pip install gunicorn uvicorn[standard]
