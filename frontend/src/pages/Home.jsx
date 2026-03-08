@@ -31,11 +31,26 @@ function Home() {
   const [availabilityDate, setAvailabilityDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
-  const [availabilities, setAvailabilities] = useState([]);
+
+  const [availabilities, setAvailabilities] = useState(() => {
+    const saved = localStorage.getItem('availabilities');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Auto-filter out old dates
+      const today = new Date().toISOString().split('T')[0];
+      return parsed.filter(a => a.date >= today);
+    }
+    return [];
+  });
+
   const [schedule, setSchedule] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
 
   const isLoggedIn = !!localStorage.getItem('token');
+
+  useEffect(() => {
+    localStorage.setItem('availabilities', JSON.stringify(availabilities));
+  }, [availabilities]);
 
   useEffect(() => {
     if (isLoggedIn) {
@@ -102,17 +117,25 @@ function Home() {
 
   const handleGenerateSchedule = async () => {
     setIsGenerating(true);
+
+    // Sort availabilities by date so that start_date and end_date make sense
+    const sortedAvail = [...availabilities].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const today = new Date().toISOString().split('T')[0];
+    const defaultEnd = new Date(new Date().setDate(new Date().getDate() + 7)).toISOString().split('T')[0];
+
     const requestBody = {
-      tasks: tasks.map(t => ({
+      // ONLY send active tasks, ignore completed
+      tasks: tasks.filter(t => !t.completed).map(t => ({
         title: t.title,
         due_date: t.due_date,
         estimated_hours: t.estimated_hours
       })),
       availability: {
-        start_date: availabilities[0]?.date || new Date().toISOString().split('T')[0],
-        end_date: availabilities[availabilities.length - 1]?.date || new Date().toISOString().split('T')[0],
+        start_date: sortedAvail[0]?.date || today,
+        end_date: sortedAvail[sortedAvail.length - 1]?.date || defaultEnd,
         daily_available_hours: 8,
-        preferred_time_blocks: availabilities.map(a => [a.start, a.end])
+        // Send actual time blocks or a fallback logical block
+        preferred_time_blocks: sortedAvail.length > 0 ? sortedAvail.map(a => [a.start, a.end]) : [["09:00", "17:00"]]
       }
     };
 
@@ -123,6 +146,7 @@ function Home() {
         setIsGenerating(false);
       }, 800);
     } catch (error) {
+      alert("Failed to generate schedule. Please ensure your tasks and availabilities are valid.");
       setIsGenerating(false);
     }
   };
@@ -133,6 +157,10 @@ function Home() {
     setAvailabilityDate('');
     setStartTime('');
     setEndTime('');
+  };
+
+  const deleteAvailability = (idxToDelete) => {
+    setAvailabilities(availabilities.filter((_, idx) => idx !== idxToDelete));
   };
 
   const handleCompleteTask = async (taskId) => {
@@ -569,8 +597,18 @@ function Home() {
                   <h5 className="form-label mb-3">Saved Time Slots</h5>
                   <div className="d-flex flex-wrap gap-2">
                     {availabilities.map((av, idx) => (
-                      <div key={idx} className="px-3 py-2 rounded-pill small border shadow-sm" style={{ backgroundColor: 'var(--bg-color)', color: 'var(--text-main)', borderColor: 'var(--border-color)' }}>
-                        <span className="fw-bold">{av.date}</span> • {av.start} - {av.end}
+                      <div key={idx} className="px-3 py-2 rounded-pill small border shadow-sm d-flex align-items-center gap-2" style={{ backgroundColor: 'var(--bg-color)', color: 'var(--text-main)', borderColor: 'var(--border-color)' }}>
+                        <span>
+                          <span className="fw-bold">{av.date}</span> • {av.start} - {av.end}
+                        </span>
+                        <button
+                          onClick={() => deleteAvailability(idx)}
+                          className="btn btn-link p-0 m-0 border-0 text-muted ms-1"
+                          style={{ lineHeight: 1 }}
+                          title="Remove time slot"
+                        >
+                          <Trash2 size={12} />
+                        </button>
                       </div>
                     ))}
                   </div>
