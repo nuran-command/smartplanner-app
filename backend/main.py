@@ -48,20 +48,19 @@ class TaskCreate(BaseModel):
     estimated_hours: int
     category: str = "General"
 
-class Availability(BaseModel):
-    start_date: date
-    end_date: date
-    daily_available_hours: int
-    preferred_time_blocks: List[tuple[time, time]]
-
 class TaskInput(BaseModel):
     title: str
     due_date: date
     estimated_hours: int
 
+class TimeSlot(BaseModel):
+    date: date
+    start: time
+    end: time
+
 class ScheduleRequest(BaseModel):
     tasks: List[TaskInput]
-    availability: Availability
+    time_slots: List[TimeSlot]
 
 class TaskUpdate(BaseModel):
     completed: bool = None
@@ -213,15 +212,8 @@ def generate_plan(request: ScheduleRequest):
 @app.post("/generate-schedule/")
 def generate_schedule(request: ScheduleRequest):
     tasks = [t.dict() for t in request.tasks]
-    availability = {
-        "start_date": request.availability.start_date.isoformat(),
-        "end_date": request.availability.end_date.isoformat(),
-        "daily_available_hours": request.availability.daily_available_hours,
-        "preferred_time_blocks": [
-            (t[0].strftime("%H:%M"), t[1].strftime("%H:%M")) for t in request.availability.preferred_time_blocks
-        ]
-    }
-    plan = schedule_tasks(tasks, availability)
+    slots = [{"date": s.date.isoformat(), "start": s.start.strftime("%H:%M"), "end": s.end.strftime("%H:%M")} for s in request.time_slots]
+    plan = schedule_tasks(tasks, slots)
     return {"plan": plan}
 
 @app.get("/test-db")

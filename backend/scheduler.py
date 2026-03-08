@@ -1,46 +1,58 @@
 from datetime import datetime, timedelta, time
 from typing import List, Dict
 
-def schedule_tasks(tasks: List[Dict], availability: Dict) -> List[Dict]:
+def schedule_tasks(tasks: List[Dict], time_slots: List[Dict]) -> List[Dict]:
     # Sort tasks by due date
     tasks = sorted(tasks, key=lambda x: x["due_date"])
+    # Sort slots by date and start time
+    slots = sorted(time_slots, key=lambda x: (x["date"], x["start"]))
+    
     schedule = []
-
-    current_date = datetime.strptime(availability["start_date"], "%Y-%m-%d").date()
-    end_date = datetime.strptime(availability["end_date"], "%Y-%m-%d").date()
-    daily_hours = availability["daily_available_hours"]
-    time_blocks = [
-        (datetime.strptime(start, "%H:%M").time(), datetime.strptime(end, "%H:%M").time())
-        for start, end in availability["preferred_time_blocks"]
-    ]
-
     task_index = 0
-    while current_date <= end_date and task_index < len(tasks):
-        hours_left_today = daily_hours
-        for block_start, block_end in time_blocks:
-            if task_index >= len(tasks):
-                break
 
+    for slot in slots:
+        if task_index >= len(tasks):
+            break
+            
+        slot_date = datetime.strptime(slot["date"], "%Y-%m-%d").date()
+        block_start = datetime.strptime(slot["start"], "%H:%M").time()
+        block_end = datetime.strptime(slot["end"], "%H:%M").time()
+        
+        current_block_time = datetime.combine(datetime.today(), block_start)
+        end_block_time = datetime.combine(datetime.today(), block_end)
+        
+        if end_block_time <= current_block_time:
+            end_block_time += timedelta(days=1)
+
+        hours_in_block = (end_block_time - current_block_time).total_seconds() / 3600.0
+
+        while task_index < len(tasks) and hours_in_block > 0.01:
             task = tasks[task_index]
-            if task["due_date"] < current_date:
+            
+            # If task is already due before the slot date, skip it
+            if task["due_date"] < slot_date:
                 task_index += 1
                 continue
-
-            task_hours = min(task["estimated_hours"], hours_left_today)
-            if task_hours > 0:
-                schedule.append({
-                    "date": current_date.isoformat(),
-                    "task": task["title"],
-                    "hours_allocated": task_hours,
-                    "time_block": [block_start.strftime("%H:%M"), 
-                                   (datetime.combine(datetime.today(), block_start) + timedelta(hours=task_hours)).time().strftime("%H:%M")]
-                })
-                task["estimated_hours"] -= task_hours
-                hours_left_today -= task_hours
-
-            if task["estimated_hours"] <= 0:
+            
+            task_hours = min(task["estimated_hours"], hours_in_block)
+            if task_hours <= 0:
                 task_index += 1
-
-        current_date += timedelta(days=1)
+                continue
+                
+            end_task_time = current_block_time + timedelta(hours=task_hours)
+            
+            schedule.append({
+                "date": slot["date"],
+                "task": task["title"],
+                "hours_allocated": round(task_hours, 1),
+                "time_block": [current_block_time.strftime("%H:%M"), end_task_time.strftime("%H:%M")]
+            })
+            
+            task["estimated_hours"] -= task_hours
+            hours_in_block -= task_hours
+            current_block_time = end_task_time
+            
+            if task["estimated_hours"] <= 0.01:
+                task_index += 1
 
     return schedule

@@ -118,10 +118,19 @@ function Home() {
   const handleGenerateSchedule = async () => {
     setIsGenerating(true);
 
-    // Sort availabilities by date so that start_date and end_date make sense
-    const sortedAvail = [...availabilities].sort((a, b) => new Date(a.date) - new Date(b.date));
-    const today = new Date().toISOString().split('T')[0];
-    const defaultEnd = new Date(new Date().setDate(new Date().getDate() + 7)).toISOString().split('T')[0];
+    const generateDefaultSlots = () => {
+      const slots = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() + i);
+        slots.push({
+          date: d.toISOString().split('T')[0],
+          start: '09:00',
+          end: '17:00'
+        });
+      }
+      return slots;
+    };
 
     const requestBody = {
       // ONLY send active tasks, ignore completed
@@ -130,14 +139,16 @@ function Home() {
         due_date: t.due_date,
         estimated_hours: t.estimated_hours
       })),
-      availability: {
-        start_date: sortedAvail[0]?.date || today,
-        end_date: sortedAvail[sortedAvail.length - 1]?.date || defaultEnd,
-        daily_available_hours: 8,
-        // Send actual time blocks or a fallback logical block
-        preferred_time_blocks: sortedAvail.length > 0 ? sortedAvail.map(a => [a.start, a.end]) : [["09:00", "17:00"]]
-      }
+      time_slots: availabilities.length > 0
+        ? availabilities.map(a => ({ date: a.date, start: a.start, end: a.end }))
+        : generateDefaultSlots()
     };
+
+    if (requestBody.tasks.length === 0) {
+      alert("You have no pending tasks to schedule!");
+      setIsGenerating(false);
+      return;
+    }
 
     try {
       const response = await axios.post(`${API_BASE_URL}/generate-schedule/`, requestBody);
